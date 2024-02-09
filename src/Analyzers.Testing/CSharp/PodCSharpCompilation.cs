@@ -10,7 +10,7 @@ using System.Runtime.Loader;
 
 namespace PodNet.Analyzers.Testing.CSharp;
 
-/// <summary>A highly opinionated wrapper around <see cref="compilation"/>, that allows for running <see cref="IIncrementalGenerator"/>s and executing <see cref="CSharpScript"/>s for testing.</summary>
+/// <summary>A highly opinionated wrapper around <paramref name="compilation"/>, that allows for running <see cref="IIncrementalGenerator"/>s and executing <see cref="CSharpScript"/>s for testing.</summary>
 /// <remarks>Note that this class is <b>stateful</b>; for example by calling <see cref="RunGeneratorsAndUpdateCompilation"/>, the referenced <see cref="CurrentCompilation"/> is replaced with the new one.</remarks>
 /// <param name="compilation">The compilation instance to wrap.</param>
 public sealed class PodCSharpCompilation(CSharpCompilation compilation)
@@ -131,8 +131,8 @@ public sealed class PodCSharpCompilation(CSharpCompilation compilation)
     /// <param name="configureOptions">An optional callback to configure the default <see cref="ScriptOptions"/>.</param>
     /// <param name="cancellationToken">The cancellation token passed to underlying calls.</param>
     /// <param name="name">The name of the script being executed. Defaults to the caller member's name.</param>
-    /// <returns>The result of the script execution, including the result from <see cref="Compilation.Emit"/> and any related <see cref="Diagnostic"/>s.</returns>
-    /// <exception cref="InvalidOperationException">Thrown if <see cref="Compilation.Emit"/> results in an <see cref="Microsoft.CodeAnalysis.Emit.EmitResult.Success"/> that is <see langword="false"/>.</exception>
+    /// <returns>The result of the script execution, including the result from <see cref="Compilation.Emit(Stream, Stream?, Stream?, Stream?, IEnumerable{ResourceDescription}?, Microsoft.CodeAnalysis.Emit.EmitOptions, IMethodSymbol?, Stream?, IEnumerable{EmbeddedText}?, CancellationToken)"/> and any related <see cref="Diagnostic"/>s.</returns>
+    /// <exception cref="InvalidOperationException">Thrown if <see cref="Compilation.Emit(Stream, Stream?, Stream?, Stream?, IEnumerable{ResourceDescription}?, Microsoft.CodeAnalysis.Emit.EmitOptions, IMethodSymbol?, Stream?, IEnumerable{EmbeddedText}?, CancellationToken)"/> results in an <see cref="Microsoft.CodeAnalysis.Emit.EmitResult.Success"/> that is <see langword="false"/>.</exception>
     public async Task<ScriptExecutionResult<T>> ExecuteScriptAsync<T>(
         string cSharpScript,
         object? globals = null,

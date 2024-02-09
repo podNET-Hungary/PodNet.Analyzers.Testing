@@ -26,7 +26,9 @@ public sealed class InMemoryScriptMetadataResolver(
     /// <summary>The additional references to try to resolve from, when <see cref="RootResolver"/> can't resolve one.</summary>
     public ImmutableDictionary<string, PortableExecutableReference> InMemoryReferences { get; } = inMemoryReferences ?? ImmutableDictionary<string, PortableExecutableReference>.Empty;
 
+    /// <inheritdoc/>
     public override bool Equals(object? other) => Equals(this, other);
+    /// <inheritdoc/>
     public override int GetHashCode() => RootResolver.GetHashCode() * 21;
 
     /// <summary>Resolves the given reference using <see cref="RootResolver"/>, or when that fails to resolve, <see cref="InMemoryReferences"/>. The latter only takes into account <paramref name="reference"/>.</summary>
