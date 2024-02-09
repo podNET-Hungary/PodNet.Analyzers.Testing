@@ -14,12 +14,18 @@ public class AnalyzerConfigOptionsProvider(
     /// <summary>The global options, as they are available from the options provided during construction.</summary>
     public override AnalyzerConfigOptions GlobalOptions => globalOptions;
 
+    /// <summary>The lookup options for each additional syntax tree.</summary>
+    public Dictionary<SyntaxTree, AnalyzerConfigOptions> OptionsForSyntaxTrees { get; } = optionsForSyntaxTrees;
+
+    /// <summary>The lookup options for each additional text file.</summary>
+    public Dictionary<Microsoft.CodeAnalysis.AdditionalText, AnalyzerConfigOptions> OptionsForAdditionalTexts { get; } = optionsForAdditionalTexts;
+
     /// <summary>Gets the <see cref="GlobalOptions"/>, and any additional options specific to <paramref name="key"/>.</summary>
     /// <param name="key">The syntax tree to look up additional options for.</param>
     /// <returns>The <see cref="GlobalOptions"/>, and any additional options specific to <paramref name="key"/>.</returns>
     public override AnalyzerConfigOptions GetOptions(SyntaxTree key)
     {
-        if (optionsForSyntaxTrees.TryGetValue(key, out var value))
+        if (OptionsForSyntaxTrees.TryGetValue(key, out var value))
             return new(new Dictionary<string, string?>(GlobalOptions.Values.Concat(value.Values)));
         return GlobalOptions;
     }
@@ -27,7 +33,7 @@ public class AnalyzerConfigOptionsProvider(
     /// <inheritdoc cref="GetOptions(SyntaxTree)"/>
     public override AnalyzerConfigOptions GetOptions(Microsoft.CodeAnalysis.AdditionalText key)
     {
-        if (optionsForAdditionalTexts.TryGetValue(key, out var value))
+        if (OptionsForAdditionalTexts.TryGetValue(key, out var value))
             return new(new Dictionary<string, string?>(GlobalOptions.Values.Concat(value.Values)));
         return GlobalOptions;
     }

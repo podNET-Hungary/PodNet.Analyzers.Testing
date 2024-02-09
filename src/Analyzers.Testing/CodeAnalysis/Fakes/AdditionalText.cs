@@ -12,9 +12,12 @@ public class AdditionalText(string path, SourceText? text) : Microsoft.CodeAnaly
 
     /// <summary>The "path" for the text file. Doesn't necessarily point to a valid location.</summary>
     public override string Path => path;
-    
+
+    /// <summary>Retrieves the text stored with this instance.</summary>
+    public SourceText? Text => text;
+
     /// <summary>Return the wrapped text of the current fake.</summary>
     /// <param name="cancellationToken">The cancellation token. Unused.</param>
     /// <returns>The source text that was referenced during construction of this instance.</returns>
-    public override SourceText? GetText(CancellationToken cancellationToken = default) => text;
+    public override SourceText? GetText(CancellationToken cancellationToken = default) => Text;
 }
