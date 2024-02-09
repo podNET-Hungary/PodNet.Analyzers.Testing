@@ -8,8 +8,8 @@ namespace PodNet.Analyzers.Testing.CodeAnalysis.Fakes;
 /// <param name="optionsForAdditionalTexts">The fake options for inidividual <see cref="Microsoft.CodeAnalysis.AdditionalText"/>s.</param>
 public class AnalyzerConfigOptionsProvider(
     AnalyzerConfigOptions globalOptions,
-    IReadOnlyDictionary<SyntaxTree, AnalyzerConfigOptions> optionsForSyntaxTrees,
-    IReadOnlyDictionary<Microsoft.CodeAnalysis.AdditionalText, AnalyzerConfigOptions> optionsForAdditionalTexts) : Microsoft.CodeAnalysis.Diagnostics.AnalyzerConfigOptionsProvider
+    Dictionary<SyntaxTree, AnalyzerConfigOptions> optionsForSyntaxTrees,
+    Dictionary<Microsoft.CodeAnalysis.AdditionalText, AnalyzerConfigOptions> optionsForAdditionalTexts) : Microsoft.CodeAnalysis.Diagnostics.AnalyzerConfigOptionsProvider
 {
     /// <summary>The global options, as they are available from the options provided during construction.</summary>
     public override AnalyzerConfigOptions GlobalOptions => globalOptions;

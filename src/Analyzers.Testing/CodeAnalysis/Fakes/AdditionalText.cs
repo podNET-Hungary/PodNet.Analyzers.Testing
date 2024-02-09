@@ -9,6 +9,7 @@ public class AdditionalText(string path, SourceText? text) : Microsoft.CodeAnaly
 {
     /// <inheritdoc cref="AdditionalText"/>
     public AdditionalText(string path, string text) : this(path, SourceText.From(text)) { }
+
     /// <summary>The "path" for the text file. Doesn't necessarily point to a valid location.</summary>
     public override string Path => path;
     
