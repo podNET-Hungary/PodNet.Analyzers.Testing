@@ -1,8 +1,0 @@
-<Project>
-
-	<Target Name="AutoPackNuGetToTest" BeforeTargets="Restore;CollectPackageReferences" Condition="'@(AutoPack)' != ''">
-		<MakeDir Directories="$(RestoreAdditionalProjectSources)" />
-		<MSBuild Projects="@(AutoPack)" Targets="Pack" />
-	</Target>
-
-</Project>
