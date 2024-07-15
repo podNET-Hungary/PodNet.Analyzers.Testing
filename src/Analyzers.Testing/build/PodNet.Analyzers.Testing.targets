@@ -1,17 +1,8 @@
 <Project>
-	
-	<Target Name="PreparePackNuGetToTest" BeforeTargets="PackNuGetToTest">
-		<ItemGroup>
-			<AutoPackBeforeReferenceProjectReference Include="@(ProjectReference)" Condition="'%(ProjectReference.AutoPackBeforeReference)' == 'true'" />
-		</ItemGroup>
+
+	<Target Name="AutoPackNuGetToTest" BeforeTargets="Restore;CollectPackageReferences" Condition="'@(AutoPack)' != ''">
+		<MakeDir Directories="$(RestoreAdditionalProjectSources)" />
+		<MSBuild Projects="@(AutoPack)" Targets="Pack" />
 	</Target>
 
-	<Target Name="PackNuGetToTest" BeforeTargets="Restore;CollectPackageReferences" Condition="'@(AutoPackBeforeReferenceProjectReference)' != ''">
-		<PropertyGroup>
-			<RestoreAdditionalProjectSources Condition="'$(RestoreAdditionalProjectSources)' == ''">$(ArtifactsPath)\package</RestoreAdditionalProjectSources>
-		</PropertyGroup>
-		<MakeDir Directories="$(RestoreAdditionalProjectSources)" />
-		<MSBuild Projects="@(AutoPackBeforeReferenceProjectReference)" Targets="Pack" />
-	</Target>
-	
 </Project>
