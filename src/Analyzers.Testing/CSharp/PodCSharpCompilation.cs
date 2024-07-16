@@ -10,10 +10,8 @@ using System.Runtime.Loader;
 
 namespace PodNet.Analyzers.Testing.CSharp;
 
-/// <summary>A highly opinionated wrapper around <paramref name="compilation"/>, that allows for running <see cref="IIncrementalGenerator"/>s and executing <see cref="CSharpScript"/>s for testing.</summary>
-/// <remarks>Note that this class is <b>stateful</b>; for example by calling <see cref="RunGeneratorsAndUpdateCompilation"/>, the referenced <see cref="CurrentCompilation"/> is replaced with the new one.</remarks>
-/// <param name="compilation">The compilation instance to wrap.</param>
-public sealed class PodCSharpCompilation(CSharpCompilation compilation)
+/// <summary>A highly opinionated helper around <see cref="CSharpCompilation"/>, that allows for running <see cref="IIncrementalGenerator"/>s and executing <see cref="CSharpScript"/>s for testing.</summary>
+public static class PodCSharpCompilation
 {
     /// <summary>
     /// Gets a <see cref="SyntaxTree"/> that represents the following code:
@@ -53,7 +51,7 @@ public sealed class PodCSharpCompilation(CSharpCompilation compilation)
     public static ImmutableArray<PortableExecutableReference> GetCurrentReferences()
         => GetValidReferences(AssemblyLoadContext.Default.Assemblies);
 
-    /// <summary>Creates an opinionated wrapper around a <see cref="CSharpCompilation"/> to simplify testing of <see cref="IIncrementalGenerator"/>s.</summary>
+    /// <summary>Creates an opinionated <see cref="CSharpCompilation"/> to simplify testing of <see cref="IIncrementalGenerator"/>s.</summary>
     /// <param name="sourceTexts">The initial source texts to add to the <see cref="CSharpCompilation"/>. If <paramref name="implicitUsings"/> is <see langword="true"/>, default <see langword="global using"/>s are also generated and added to the compilation as a source text (see <seealso cref="GetImplicitUsings"/>).</param>
     /// <param name="configureCompilation">An optional configuration callback that can be used to modify the default <see cref="CSharpCompilation"/> being created.</param>
     /// <param name="implicitUsings">If enabled, adds a generated source that simulates implicit default <see langword="global using"/>s (see <seealso cref="GetImplicitUsings"/>)).</param>
@@ -61,8 +59,8 @@ public sealed class PodCSharpCompilation(CSharpCompilation compilation)
     /// <param name="references">Additional references to add to the <see cref="CSharpCompilation"/>.</param>
     /// <param name="compilationOptions">The options to supply to the <see cref="CSharpCompilation"/> being created. Defaults to creating a <see cref="OutputKind.DynamicallyLinkedLibrary"/> with all other defaults unchanged.</param>
     /// <param name="assemblyName">The name of the underlying dynamic <see cref="Assembly"/> that can be created from the <see cref="CSharpCompilation"/>.</param>
-    /// <returns>A preconfigured instance of <see cref="PodCSharpCompilation"/>.</returns>
-    public static PodCSharpCompilation Create(
+    /// <returns>A preconfigured instance of <see cref="CSharpCompilation"/>.</returns>
+    public static CSharpCompilation Create(
         IEnumerable<string> sourceTexts,
         Func<CSharpCompilation, CSharpCompilation>? configureCompilation = null,
         bool implicitUsings = true,
@@ -78,18 +76,17 @@ public sealed class PodCSharpCompilation(CSharpCompilation compilation)
             options: compilationOptions ?? new(OutputKind.DynamicallyLinkedLibrary));
         if (configureCompilation != null)
             compilation = configureCompilation(compilation);
-        return new(compilation);
+        return compilation;
     }
 
-    /// <summary>The current compilation instance. Can be updated (replaced) by calling <see cref="RunGeneratorsAndUpdateCompilation"/>.</summary>
-    public Compilation CurrentCompilation { get; private set; } = compilation;
-
-    /// <summary>Creates a new <see cref="CSharpGeneratorDriver"/> and runs the supplied <paramref name="generators"/> on it using the <see cref="CurrentCompilation"/>. Does <b>not</b> replace the <see cref="CurrentCompilation"/>.</summary>
-    /// <param name="generators">The generators to run on the <see cref="CurrentCompilation"/>.</param>
+    /// <summary>Creates a new <see cref="CSharpGeneratorDriver"/> and runs the supplied <paramref name="generators"/> on it using this <see cref="CSharpCompilation"/>.</summary>
+    /// <param name="compilation">The compilation to run the provided <paramref name="generators"/> on.</param>
+    /// <param name="generators">The generators to run on the <see cref="CSharpCompilation"/>.</param>
     /// <param name="configureGeneratorDriver">An optional callback to configure the default <see cref="CSharpGeneratorDriver"/>.</param>
     /// <param name="cancellationToken">The token that's being passed through to <see cref="GeneratorDriver.RunGenerators"/>.</param>
     /// <returns>The result of the run.</returns>
-    public GeneratorDriverRunResult RunGenerators(
+    public static GeneratorDriverRunResult RunGenerators(
+        this CSharpCompilation compilation,
         IIncrementalGenerator[] generators,
         Func<CSharpGeneratorDriver, CSharpGeneratorDriver>? configureGeneratorDriver = null,
         CancellationToken cancellationToken = default)
@@ -98,18 +95,22 @@ public sealed class PodCSharpCompilation(CSharpCompilation compilation)
         if (configureGeneratorDriver != null)
             driver = configureGeneratorDriver(driver);
 
-        return driver.RunGenerators(CurrentCompilation, cancellationToken).GetRunResult();
+        return driver.RunGenerators(compilation, cancellationToken).GetRunResult();
     }
 
-    /// <summary>Creates a new <see cref="CSharpGeneratorDriver"/> and runs the supplied <paramref name="generators"/> on it using the <see cref="CurrentCompilation"/>. <b>Replaces</b> the <see cref="CurrentCompilation"/> with the resulting compilation.</summary>
-    /// <param name="generators">The generators to run on the <see cref="CurrentCompilation"/>.</param>
+    /// <summary>Creates a new <see cref="CSharpGeneratorDriver"/> and runs the supplied <paramref name="generators"/> on it using this <see cref="CSharpCompilation"/>. <b>Replaces</b> the <paramref name="compilation"/> with the resulting compilation.</summary>
+    /// <param name="compilation">The compilation to run the provided <paramref name="generators"/> on.</param>
+    /// <param name="generators">The generators to run on the <paramref name="compilation"/>.</param>
     /// <param name="configureGeneratorDriver">An optional callback to configure the default <see cref="CSharpGeneratorDriver"/>.</param>
     /// <param name="cancellationToken">The token that's being passed through to <see cref="GeneratorDriver.RunGeneratorsAndUpdateCompilation"/>.</param>
     /// <param name="diagnostics">The diagnostics generated by <see cref="GeneratorDriver.RunGeneratorsAndUpdateCompilation"/>.</param>
+    /// <param name="outputCompilation">The updated compilation generated by <see cref="GeneratorDriver.RunGeneratorsAndUpdateCompilation"/>.</param>
     /// <returns>The result of the run.</returns>
-    public GeneratorDriverRunResult RunGeneratorsAndUpdateCompilation(
+    public static GeneratorDriverRunResult RunGenerators(
+        this CSharpCompilation compilation,
         IIncrementalGenerator[] generators,
         out ImmutableArray<Diagnostic> diagnostics,
+        out CSharpCompilation outputCompilation,
         Func<CSharpGeneratorDriver, CSharpGeneratorDriver>? configureGeneratorDriver = null,
         CancellationToken cancellationToken = default)
     {
@@ -117,14 +118,15 @@ public sealed class PodCSharpCompilation(CSharpCompilation compilation)
         if (configureGeneratorDriver != null)
             driver = configureGeneratorDriver(driver);
 
-        var result = driver.RunGeneratorsAndUpdateCompilation(CurrentCompilation, out var outputCompilation, out diagnostics, cancellationToken).GetRunResult();
-        CurrentCompilation = outputCompilation;
+        var result = driver.RunGeneratorsAndUpdateCompilation(compilation, out var outputUntypedCompilation, out diagnostics, cancellationToken).GetRunResult();
+        outputCompilation = (CSharpCompilation)outputUntypedCompilation;
         return result;
     }
 
-    /// <summary>Compiles and emits <see cref="CurrentCompilation"/>, <c>#r</c> loads it into the script context, and executes the provided <paramref name="cSharpScript"/> code on the resulting dynamic <see cref="Assembly"/>.</summary>
+    /// <summary>Compiles and emits this <paramref name="compilation"/>, <c>#r</c> loads it into the script context, and executes the provided <paramref name="cSharpScript"/> code on the resulting dynamic <see cref="Assembly"/>.</summary>
     /// <remarks>Calling this method with unvalidated code can pose a security risk.</remarks>
     /// <typeparam name="T">The type of the expected result from the script. Provide <see langword="object?"/> if no result is expected.</typeparam>
+    /// <param name="compilation">The compilation to execute <paramref name="cSharpScript"/> on.</param>
     /// <param name="cSharpScript">The code to execute on the compiled assembly (see <see cref="CSharpScript"/>).</param>
     /// <param name="globals">The globals object. The public properties on this object will be available in the global scope of the <paramref name="cSharpScript"/>.</param>
     /// <param name="catchException">If specified, any exception thrown by the script top-level code is passed to <paramref name="catchException"/>. If it returns true the exception is caught and stored on the resulting <see cref="ScriptState"/>, otherwise the exception is propagated to the caller.</param>
@@ -133,7 +135,8 @@ public sealed class PodCSharpCompilation(CSharpCompilation compilation)
     /// <param name="name">The name of the script being executed. Defaults to the caller member's name.</param>
     /// <returns>The result of the script execution, including the result from <see cref="Compilation.Emit(Stream, Stream?, Stream?, Stream?, IEnumerable{ResourceDescription}?, Microsoft.CodeAnalysis.Emit.EmitOptions, IMethodSymbol?, Stream?, IEnumerable{EmbeddedText}?, CancellationToken)"/> and any related <see cref="Diagnostic"/>s.</returns>
     /// <exception cref="InvalidOperationException">Thrown if <see cref="Compilation.Emit(Stream, Stream?, Stream?, Stream?, IEnumerable{ResourceDescription}?, Microsoft.CodeAnalysis.Emit.EmitOptions, IMethodSymbol?, Stream?, IEnumerable{EmbeddedText}?, CancellationToken)"/> results in an <see cref="Microsoft.CodeAnalysis.Emit.EmitResult.Success"/> that is <see langword="false"/>.</exception>
-    public async Task<ScriptExecutionResult<T>> ExecuteScriptAsync<T>(
+    public static async Task<ScriptExecutionResult<T>> ExecuteScriptAsync<T>(
+        this CSharpCompilation compilation,
         string cSharpScript,
         object? globals = null,
         Func<Exception, bool>? catchException = null,
@@ -142,7 +145,7 @@ public sealed class PodCSharpCompilation(CSharpCompilation compilation)
         [CallerMemberName] string name = "Script")
     {
         using var assemblyStream = new MemoryStream();
-        var emitResult = CurrentCompilation.Emit(assemblyStream, cancellationToken: cancellationToken);
+        var emitResult = compilation.Emit(assemblyStream, cancellationToken: cancellationToken);
         if (!emitResult.Success)
         {
             var exception = new InvalidOperationException($"Compilation error. See {nameof(InvalidOperationException.Data)} property for details. Diagnostics ({emitResult.Diagnostics.Length}): {string.Join("; ", emitResult.Diagnostics)}");
