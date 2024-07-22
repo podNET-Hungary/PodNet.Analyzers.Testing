@@ -1,0 +1,6 @@
+<Project>
+  <PropertyGroup>
+    <!-- Test projects don't need vulnerability assessments; the project under test does. -->
+    <NuGetAudit>false</NuGetAudit>
+  </PropertyGroup>
+</Project>
