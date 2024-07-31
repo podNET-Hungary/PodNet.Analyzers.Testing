@@ -18,7 +18,7 @@ public static class AssertExtensions
     public static void AssertDiagnosticLevelBelow(this Compilation compilation, DiagnosticSeverity diagnosticSeverity, bool includeEmit = false)
     {
         var diagnostics = compilation.GetDiagnostics(includeEmit);
-        var errors = diagnostics.Where(d => d.Severity < diagnosticSeverity).ToList();
+        var errors = diagnostics.Where(d => d.Severity >= diagnosticSeverity).ToList();
         if (errors.Count > 0)
             throw new AssertFailedException($"""There were {errors.Count} errors in the compilation. See {nameof(Exception.Data)} for details.""").WithData(errors);
     }
