@@ -157,7 +157,9 @@ public static class PodCSharpCompilation
         var options = ScriptOptions.Default
             .WithMetadataResolver(new InMemoryScriptMetadataResolver(ScriptMetadataResolver.Default)
                 .AddInMemoryReference(name, reference))
-            .AddReferences(reference);
+            .AddReferences(reference)
+            .AddReferences(CSharpInteractiveReferences)
+            .AddImports(CSharpInteractiveUsings);
         if (configureOptions != null)
             options = configureOptions(options);
         var alc = new AssemblyLoadContext(name);
@@ -166,11 +168,60 @@ public static class PodCSharpCompilation
         var loader = new InteractiveAssemblyLoader();
         loader.RegisterDependency(assembly);
 
-        var csharpScript = CSharpScript.Create<T>($"""
-                    #r "{name}" 
-                    {cSharpScript}
-                    """, options, globals?.GetType(), loader);
+        var csharpScript = CSharpScript.Create<T>(cSharpScript, options, globals?.GetType(), loader);
 
         return new(emitResult, await csharpScript.RunAsync(globals, catchException, cancellationToken));
     }
+
+    /// <summary>
+    /// Copied from C:\Program Files\Microsoft Visual Studio\2022\Preview\Common7\IDE\CommonExtensions\Microsoft\VBCSharp\LanguageServices\InteractiveHost at \Core\CSharpInteractive.rsp and \Desktop\CSharpInteractive.rsp, version 2022 17.11.0 Preview 6.0
+    /// </summary>
+    public static IReadOnlyCollection<string> CSharpInteractiveReferences { get; } = [
+        "System",
+        "System.Core",
+        "Microsoft.CSharp",
+        "System.Collections",
+        "System.Collections.Concurrent",
+        "System.Console",
+        "System.Diagnostics.Debug",
+        "System.Diagnostics.Process",
+        "System.Diagnostics.StackTrace",
+        "System.Dynamic.Runtime",
+        "System.Globalization",
+        "System.IO",
+        "System.IO.FileSystem",
+        "System.IO.FileSystem.Primitives",
+        "System.Linq",
+        "System.Linq.Expressions",
+        "System.Reflection",
+        "System.Reflection.Extensions",
+        "System.Reflection.Primitives",
+        "System.Runtime",
+        "System.Runtime.Extensions",
+        "System.Runtime.Numerics",
+        "System.Runtime.InteropServices",
+        "System.Text.Encoding",
+        "System.Text.Encoding.CodePages",
+        "System.Text.Encoding.Extensions",
+        "System.Text.RegularExpressions",
+        "System.Threading",
+        "System.Threading.Tasks",
+        "System.Threading.Tasks.Parallel",
+        "System.Threading.Thread",
+        "System.ValueTuple"];
+
+    /// <summary>
+    /// Copied from C:\Program Files\Microsoft Visual Studio\2022\Preview\Common7\IDE\CommonExtensions\Microsoft\VBCSharp\LanguageServices\InteractiveHost at \Core\CSharpInteractive.rsp and \Desktop\CSharpInteractive.rsp, version 2022 17.11.0 Preview 6.0
+    /// </summary>
+    public static IReadOnlyCollection<string> CSharpInteractiveUsings { get; } = [
+        "System",
+        "System.IO",
+        "System.Collections.Generic",
+        "System.Console",
+        "System.Diagnostics",
+        "System.Dynamic",
+        "System.Linq",
+        "System.Linq.Expressions",
+        "System.Text",
+        "System.Threading.Tasks"];
 }
