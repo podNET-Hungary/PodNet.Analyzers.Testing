@@ -1,4 +1,4 @@
-﻿# PodNet.Analyzers.Testing
+﻿# PodNet.Analyzers.Testing [![NuGet](https://img.shields.io/nuget/v/PodNet.Analyzers.Testing)](https://www.nuget.org/packages/PodNet.Analyzers.Testing/)
 Opinionated testing helpers for testing PodNet Roslyn analyzers and source generators.
 
 ## Sponsorship
