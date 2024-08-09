@@ -61,7 +61,7 @@ public static class PodCSharpCompilation
     /// <param name="assemblyName">The name of the underlying dynamic <see cref="Assembly"/> that can be created from the <see cref="CSharpCompilation"/>.</param>
     /// <returns>A preconfigured instance of <see cref="CSharpCompilation"/>.</returns>
     public static CSharpCompilation Create(
-        IEnumerable<string> sourceTexts,
+        IEnumerable<SyntaxTree> sourceTexts,
         Func<CSharpCompilation, CSharpCompilation>? configureCompilation = null,
         bool implicitUsings = true,
         bool addCurrentReferences = true,
@@ -71,7 +71,7 @@ public static class PodCSharpCompilation
     {
         var compilation = CSharpCompilation.Create(
             assemblyName: assemblyName,
-            syntaxTrees: sourceTexts.Select(s => CSharpSyntaxTree.ParseText(s)).Concat(implicitUsings ? [GetImplicitUsings()] : []),
+            syntaxTrees: sourceTexts.Concat(implicitUsings ? [GetImplicitUsings()] : []),
             references: (references ?? []).Concat(addCurrentReferences ? GetCurrentReferences() : []),
             options: compilationOptions ?? new(OutputKind.DynamicallyLinkedLibrary));
         if (configureCompilation != null)
