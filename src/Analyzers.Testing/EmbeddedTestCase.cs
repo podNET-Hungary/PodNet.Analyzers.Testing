@@ -7,6 +7,8 @@ using System.Reflection;
 using Microsoft.CodeAnalysis.Scripting;
 using Microsoft.CodeAnalysis.CodeActions;
 using File = (string Name, string Content);
+using Fakes = PodNet.Analyzers.Testing.CodeAnalysis.Fakes;
+using System.Collections.Immutable;
 
 namespace PodNet.Analyzers.Testing;
 
@@ -44,18 +46,28 @@ public class EmbeddedTestCase<TGenerator, TEmbeddedTest> where TGenerator : IInc
     /// </summary>
     public virtual IIncrementalGenerator[] Generators { get; } = [new TGenerator()];
 
+    protected IEnumerable<PropertyInfo> StaticProperties { get; } = typeof(TEmbeddedTest).GetProperties(BindingFlags.Public | BindingFlags.Static);
+
+    protected IReadOnlyCollection<File> GetPropertyKeyValues(IEnumerable<PropertyInfo> properties) => properties.Select(p => (p.Name, p.GetValue(null)!.ToString()!)).ToList().AsReadOnly();
+
     /// <summary>
     /// Gets the static property name-values of <typeparamref name="TEmbeddedTest"/> with the given <paramref name="nameSuffix"/>.
     /// </summary>
     /// <param name="nameSuffix">The suffix to search for on the object's static properties.</param>
     /// <returns>The property name-values of <typeparamref name="TEmbeddedTest"/> with the suffix <paramref name="nameSuffix"/>.</returns>
-    public virtual IReadOnlyCollection<File> GetStaticPropertyValues(string nameSuffix) => typeof(TEmbeddedTest).GetProperties(BindingFlags.Public | BindingFlags.Static).Where(p => p.Name.EndsWith(nameSuffix)).Select(p => (p.Name, p.GetValue(null)!.ToString()!)).ToList().AsReadOnly();
+    public virtual IReadOnlyCollection<File> GetStaticPropertyValues(string nameSuffix) => GetPropertyKeyValues(StaticProperties.Where(p => p.Name.EndsWith(nameSuffix)));
 
     /// <summary>
     /// Gets the static property name-values of <typeparamref name="TEmbeddedTest"/> with the suffix "Source_cs".
     /// </summary>
     /// <returns>The property name-values.</returns>
     public virtual IReadOnlyCollection<File> GetSources() => GetStaticPropertyValues("Source_cs");
+
+    /// <summary>
+    /// Gets the static property name-values of <typeparamref name="TEmbeddedTest"/> which do NOT have the suffix "_cs".
+    /// </summary>
+    /// <returns>The property name-values.</returns>
+    public virtual IReadOnlyCollection<File> GetAdditionalTexts() => GetPropertyKeyValues(StaticProperties.Where(p => !p.Name.EndsWith("_cs")));
 
     /// <summary>
     /// Gets the static property name-values of <typeparamref name="TEmbeddedTest"/> with the suffix "Generated_cs".
@@ -70,14 +82,15 @@ public class EmbeddedTestCase<TGenerator, TEmbeddedTest> where TGenerator : IInc
     public virtual IReadOnlyCollection<File> GetScripts() => GetStaticPropertyValues("Script_cs");
 
     /// <summary>
-    /// The test method. Gets all sources, runs the generator, then asserts the generator results and behavior (scripts) are correct.
+    /// The test method. Gets all sources and additional texts, runs the generator, then asserts the generator results and behavior (scripts) are correct.
     /// </summary>
     /// <returns></returns>
     [TestMethod]
     public virtual async Task GeneratedCodeMatchesAndWorksAsExpectedAsync()
     {
         var sources = GetSources();
-        var result = RunGenerator(sources, out var outputCompilation);
+        var additionalTexts = GetAdditionalTexts();
+        var result = RunGenerator(sources, additionalTexts, out var outputCompilation);
         AssertGenerationResults(result, outputCompilation);
         await AssertGeneratedBehaviorAsync(outputCompilation);
     }
@@ -93,12 +106,13 @@ public class EmbeddedTestCase<TGenerator, TEmbeddedTest> where TGenerator : IInc
     /// Creates the <see cref="CSharpCompilation"/> to execute <see cref="Generators"/> on, executes the generators and returns the results.
     /// </summary>
     /// <param name="sources">The sources to create the <see cref="CSharpCompilation"/> with.</param>
+    /// <param name="additionalTexts">The additional text files to provide to generator.</param>
     /// <param name="outputCompilation">The compilation produced by running the compilation.</param>
     /// <returns>The result of the generator run.</returns>
-    public virtual GeneratorDriverRunResult RunGenerator(IEnumerable<File> sources, out CSharpCompilation outputCompilation)
+    public virtual GeneratorDriverRunResult RunGenerator(IEnumerable<File> sources, IEnumerable<File> additionalTexts, out CSharpCompilation outputCompilation)
     {
         var compilation = CreateCompilation(sources);
-        return compilation.RunGenerators(Generators, out _, out outputCompilation);
+        return compilation.RunGenerators(Generators, out _, out outputCompilation, d => (CSharpGeneratorDriver)d.AddAdditionalTexts(additionalTexts.Select(a => new Fakes.AdditionalText(a.Name, a.Content)).ToImmutableArray<AdditionalText>()));
     }
 
     /// <summary>
@@ -223,7 +237,7 @@ public class EmbeddedTestCase<TGenerator, TEmbeddedTest> where TGenerator : IInc
             List<string> sourcesWithAppliedFixes = [];
 
             var codeFix = new TCodeFix();
-            var result = RunGenerator(GetSources(), out var compilation);
+            var result = RunGenerator(GetSources(), GetAdditionalTexts(), out var compilation);
 
             var project = new AdhocWorkspace().AddProject(codeFix.GetType().Name, LanguageNames.CSharp);
             foreach (var tree in compilation.SyntaxTrees)
