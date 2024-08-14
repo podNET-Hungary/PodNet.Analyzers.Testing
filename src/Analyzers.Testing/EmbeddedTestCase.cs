@@ -207,7 +207,6 @@ public class EmbeddedTestCase<TGenerator, TEmbeddedTest> where TGenerator : IInc
     public class WithCodeFix<TCodeFix> : EmbeddedTestCase<TGenerator, TEmbeddedTest>
         where TCodeFix : CodeFixProvider, new()
     {
-
         /// <summary>
         /// Gets the static property name-values of <typeparamref name="TEmbeddedTest"/> with the suffix "Source_Fixed_cs". These will be the expected results of the diagnostics produced for the current test case by <typeparamref name="TGenerator"/>.
         /// </summary>
