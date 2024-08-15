@@ -46,37 +46,38 @@ public class EmbeddedTestCase<TGenerator, TEmbeddedTest> where TGenerator : IInc
     /// </summary>
     public virtual IIncrementalGenerator[] Generators { get; } = [new TGenerator()];
 
-    protected IEnumerable<PropertyInfo> StaticProperties { get; } = typeof(TEmbeddedTest).GetProperties(BindingFlags.Public | BindingFlags.Static);
+    protected static IEnumerable<PropertyInfo> StaticProperties { get; } = typeof(TEmbeddedTest).GetProperties(BindingFlags.Public | BindingFlags.Static);
 
-    protected IReadOnlyCollection<File> GetPropertyKeyValues(IEnumerable<PropertyInfo> properties) => properties.Select(p => (p.Name, p.GetValue(null)!.ToString()!)).ToList().AsReadOnly();
+    protected IReadOnlyCollection<File> GetPropertyKeyValues(IEnumerable<PropertyInfo> properties, bool replaceUnderscoreWithDot) => properties.Select(p => (replaceUnderscoreWithDot ? p.Name.Replace('_', '.') : p.Name, p.GetValue(null)!.ToString()!)).ToList().AsReadOnly();
 
     /// <summary>
     /// Gets the static property name-values of <typeparamref name="TEmbeddedTest"/> with the given <paramref name="nameSuffix"/>.
     /// </summary>
     /// <param name="nameSuffix">The suffix to search for on the object's static properties.</param>
+    /// <param name="replaceUnderscoreWithDot">Set to true (default) to replace the underscores in the Name value (not the Content) with dots. This mimics filenames with extensions better, although recreating the original filenames is not possible.</param>
     /// <returns>The property name-values of <typeparamref name="TEmbeddedTest"/> with the suffix <paramref name="nameSuffix"/>.</returns>
-    public virtual IReadOnlyCollection<File> GetStaticPropertyValues(string nameSuffix) => GetPropertyKeyValues(StaticProperties.Where(p => p.Name.EndsWith(nameSuffix)));
+    public virtual IReadOnlyCollection<File> GetStaticPropertyValues(string nameSuffix, bool replaceUnderscoreWithDot = true) => GetPropertyKeyValues(StaticProperties.Where(p => p.Name.EndsWith(nameSuffix)), replaceUnderscoreWithDot);
 
     /// <summary>
-    /// Gets the static property name-values of <typeparamref name="TEmbeddedTest"/> with the suffix "Source_cs".
+    /// Gets the static property name-values of <typeparamref name="TEmbeddedTest"/> with the suffix "Source_cs", with the name's underscores replaced with dots to mimic filenames.
     /// </summary>
     /// <returns>The property name-values.</returns>
     public virtual IReadOnlyCollection<File> GetSources() => GetStaticPropertyValues("Source_cs");
 
     /// <summary>
-    /// Gets the static property name-values of <typeparamref name="TEmbeddedTest"/> which do NOT have the suffix "_cs".
+    /// Gets the static property name-values of <typeparamref name="TEmbeddedTest"/> which do NOT have the suffix "_cs", with the name's underscores replaced with dots to mimic filenames.
     /// </summary>
     /// <returns>The property name-values.</returns>
-    public virtual IReadOnlyCollection<File> GetAdditionalTexts() => GetPropertyKeyValues(StaticProperties.Where(p => !p.Name.EndsWith("_cs")));
+    public virtual IReadOnlyCollection<File> GetAdditionalTexts() => GetPropertyKeyValues(StaticProperties.Where(p => !p.Name.EndsWith("_cs")), true);
 
     /// <summary>
-    /// Gets the static property name-values of <typeparamref name="TEmbeddedTest"/> with the suffix "Generated_cs".
+    /// Gets the static property name-values of <typeparamref name="TEmbeddedTest"/> with the suffix "Generated_cs", with the name's underscores replaced with dots to mimic filenames.
     /// </summary>
     /// <returns>The property name-values.</returns>
     public virtual IReadOnlyCollection<File> GetExpectedGeneratedSources() => GetStaticPropertyValues("Generated_cs");
 
     /// <summary>
-    /// Gets the static property name-values of <typeparamref name="TEmbeddedTest"/> with the suffix "Script_cs".
+    /// Gets the static property name-values of <typeparamref name="TEmbeddedTest"/> with the suffix "Script_cs", with the name's underscores replaced with dots to mimic filenames.
     /// </summary>
     /// <returns>The property name-values.</returns>
     public virtual IReadOnlyCollection<File> GetScripts() => GetStaticPropertyValues("Script_cs");
@@ -98,7 +99,7 @@ public class EmbeddedTestCase<TGenerator, TEmbeddedTest> where TGenerator : IInc
     /// <summary>
     /// Creates the <see cref="CSharpCompilation"/> for the given <paramref name="sources"/>. Uses <see cref="PodCSharpCompilation"/> by default.
     /// </summary>
-    /// <param name="sources">The sources (filename-content pairs) to include in the compilation.</param>
+    /// <param name="sources">The sources (filename-content pairs) to include in the compilation. Note that the file names don't include the namespace/path of the original files.</param>
     /// <returns>The compilation.</returns>
     public virtual CSharpCompilation CreateCompilation(IEnumerable<File> sources) => PodCSharpCompilation.Create(sources.Select(s => CSharpSyntaxTree.ParseText(s.Content, path: s.Name)));
 
@@ -222,7 +223,7 @@ public class EmbeddedTestCase<TGenerator, TEmbeddedTest> where TGenerator : IInc
         where TCodeFix : CodeFixProvider, new()
     {
         /// <summary>
-        /// Gets the static property name-values of <typeparamref name="TEmbeddedTest"/> with the suffix "Source_Fixed_cs". These will be the expected results of the diagnostics produced for the current test case by <typeparamref name="TGenerator"/>.
+        /// Gets the static property name-values of <typeparamref name="TEmbeddedTest"/> with the suffix "Source_Fixed_cs", with the name's underscores replaced with dots to mimic filenames. These will be the expected results of the diagnostics produced for the current test case by <typeparamref name="TGenerator"/>.
         /// </summary>
         /// <returns>The property name-values.</returns>
         public virtual IReadOnlyCollection<File> GetFixedSources() => GetStaticPropertyValues("Source_Fixed_cs");
