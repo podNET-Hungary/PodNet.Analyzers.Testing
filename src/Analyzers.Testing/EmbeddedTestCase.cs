@@ -188,7 +188,10 @@ public class EmbeddedTestCase<TGenerator, TEmbeddedTest> where TGenerator : IInc
             if (result.GeneratedTrees.Length == 1)
             {
                 // We already checked for both to contain a single one, so expectedSource is the single that should match the single generated tree here
-                Assert.IsTrue(SyntaxFactory.AreEquivalent(expectedSyntax, result.GeneratedTrees[0], false), $"The generated tree isn't syntactically equivalent to the expected source {name}.\r\nExpected:\r\n{expectedSource}\r\nActual:\r\n{result.GeneratedTrees[0]}");
+                var areEquivalent = SyntaxFactory.AreEquivalent(expectedSyntax, result.GeneratedTrees[0], false);
+                // We don't use Assert.IsTrue here so we don't have to do costly ToString and diff on the generated tree for the message unless the syntaxes are different
+                if (!areEquivalent)
+                    Assert.Fail($"The generated tree isn't syntactically equivalent to the expected source {name}.\r\n{Diffing.TextDiff.InlineDiff(expectedSource, result.GeneratedTrees[0].ToString(), true)}");
             }
             else
             {
