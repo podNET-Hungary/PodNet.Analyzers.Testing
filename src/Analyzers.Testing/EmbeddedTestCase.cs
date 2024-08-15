@@ -46,8 +46,17 @@ public class EmbeddedTestCase<TGenerator, TEmbeddedTest> where TGenerator : IInc
     /// </summary>
     public virtual IIncrementalGenerator[] Generators { get; } = [new TGenerator()];
 
+    /// <summary>
+    /// The public static properties of <typeparamref name="TEmbeddedTest"/>.
+    /// </summary>
     protected static IEnumerable<PropertyInfo> StaticProperties { get; } = typeof(TEmbeddedTest).GetProperties(BindingFlags.Public | BindingFlags.Static);
 
+    /// <summary>
+    /// The property key-values (values typed as strings) of the provided properties. Can replace the underscores in names with dots to simulate filenames instead of properties.
+    /// </summary>
+    /// <param name="properties">The static properties to transform.</param>
+    /// <param name="replaceUnderscoreWithDot">Set to true to replace the '_' characters with '.' characters in the property names (not the content).</param>
+    /// <returns>The transformed properties.</returns>
     protected IReadOnlyCollection<File> GetPropertyKeyValues(IEnumerable<PropertyInfo> properties, bool replaceUnderscoreWithDot) => properties.Select(p => (replaceUnderscoreWithDot ? p.Name.Replace('_', '.') : p.Name, p.GetValue(null)!.ToString()!)).ToList().AsReadOnly();
 
     /// <summary>
@@ -97,11 +106,11 @@ public class EmbeddedTestCase<TGenerator, TEmbeddedTest> where TGenerator : IInc
     }
 
     /// <summary>
-    /// Creates the <see cref="CSharpCompilation"/> for the given <paramref name="sources"/>. Uses <see cref="PodCSharpCompilation"/> by default.
+    /// Creates the <see cref="CSharpCompilation"/> for the given <paramref name="syntaxTrees"/>. Uses <see cref="PodCSharpCompilation"/> by default.
     /// </summary>
-    /// <param name="sources">The sources (filename-content pairs) to include in the compilation. Note that the file names don't include the namespace/path of the original files.</param>
+    /// <param name="syntaxTrees">The sources (filename-content pairs) to include in the compilation. Note that the file names don't include the namespace/path of the original files by default.</param>
     /// <returns>The compilation.</returns>
-    public virtual CSharpCompilation CreateCompilation(IEnumerable<File> sources) => PodCSharpCompilation.Create(sources.Select(s => CSharpSyntaxTree.ParseText(s.Content, path: s.Name)));
+    public virtual CSharpCompilation CreateCompilation(ImmutableArray<SyntaxTree> syntaxTrees) => PodCSharpCompilation.Create(syntaxTrees);
 
     /// <summary>
     /// Creates the <see cref="CSharpCompilation"/> to execute <see cref="Generators"/> on, executes the generators and returns the results.
@@ -112,9 +121,51 @@ public class EmbeddedTestCase<TGenerator, TEmbeddedTest> where TGenerator : IInc
     /// <returns>The result of the generator run.</returns>
     public virtual GeneratorDriverRunResult RunGenerator(IEnumerable<File> sources, IEnumerable<File> additionalTexts, out CSharpCompilation outputCompilation)
     {
-        var compilation = CreateCompilation(sources);
-        return compilation.RunGenerators(Generators, out _, out outputCompilation, d => (CSharpGeneratorDriver)d.AddAdditionalTexts(additionalTexts.Select(a => new Fakes.AdditionalText(a.Name, a.Content)).ToImmutableArray<AdditionalText>()));
+        var additionalFiles = additionalTexts.Select(a => new Fakes.AdditionalText(a.Name, a.Content)).ToImmutableArray<AdditionalText>();
+        var syntaxTrees = sources.Select(s => CSharpSyntaxTree.ParseText(s.Content, path: s.Name)).ToImmutableArray();
+        var compilation = CreateCompilation(syntaxTrees);
+        return compilation.RunGenerators(Generators, out _, out outputCompilation, d => ConfigureGeneratorDriver(d, syntaxTrees, additionalFiles));
     }
+
+    /// <summary>
+    /// Configures the generator driver for running the generators on. By default, adds the provided <paramref name="additionalTexts"/> to the driver as <see cref="Fakes.AdditionalText"/>s.
+    /// </summary>
+    /// <param name="driver">The driver instance to configure. Immutable, but can be copied (or disregarded).</param>
+    /// <param name="syntaxTrees">The syntax trees. Can be used to define the dictionary for the <see cref="Fakes.AnalyzerConfigOptionsProvider"/>.</param>
+    /// <param name="additionalTexts">The additional texts to populate the driver with. Can also be used to define the dictionary for the <see cref="Fakes.AnalyzerConfigOptionsProvider"/>.</param>
+    /// <returns>The configured driver.</returns>
+    public virtual CSharpGeneratorDriver ConfigureGeneratorDriver(CSharpGeneratorDriver driver, ImmutableArray<SyntaxTree> syntaxTrees, ImmutableArray<AdditionalText> additionalTexts)
+        => (CSharpGeneratorDriver)driver
+            .AddAdditionalTexts(additionalTexts)
+            .WithUpdatedAnalyzerConfigOptions(new Fakes.AnalyzerConfigOptionsProvider(GlobalAnalyzerConfigOptions, syntaxTrees.ToDictionary(s => s, GetOptionsForSyntaxTree), additionalTexts.ToDictionary(s => s, GetOptionsForAdditionalText)));
+
+    /// <summary>
+    /// Gets the global options to supply to the generator. By default, adds the name of <typeparamref name="TEmbeddedTest"/> as the <c>"build_property.rootnamespace"</c> to the options. Use <see cref="Fakes.AnalyzerConfigOptions"/> to supply your own.
+    /// </summary>
+    /// <returns>The configured options.</returns>
+    public virtual Fakes.AnalyzerConfigOptions GlobalAnalyzerConfigOptions { get; } = new()
+    {
+        ["build_property.rootnamespace"] = typeof(TEmbeddedTest).Name
+    };
+
+    /// <summary>
+    /// An options instance containing no values.
+    /// </summary>
+    protected static Fakes.AnalyzerConfigOptions EmptyAnalyzerOptions { get; } = [];
+
+    /// <summary>
+    /// Used to configure the options provided for each <see cref="SyntaxTree"/> to the generator. Empty by default.
+    /// </summary>
+    /// <param name="syntaxTree">The tree to provide the options for.</param>
+    /// <returns>The options for the given tree.</returns>
+    public virtual Fakes.AnalyzerConfigOptions GetOptionsForSyntaxTree(SyntaxTree syntaxTree) => EmptyAnalyzerOptions;
+
+    /// <summary>
+    /// Used to configure the options provided for each <see cref="AdditionalText"/> to the generator. Empty by default.
+    /// </summary>
+    /// <param name="additionalText">The file to provide the options for.</param>
+    /// <returns>The options for the given text file.</returns>
+    public virtual Fakes.AnalyzerConfigOptions GetOptionsForAdditionalText(AdditionalText additionalText) => EmptyAnalyzerOptions;
 
     /// <summary>
     /// Asserts that the results are of correct shape: the result has the expected diagnostics and the generated trees are structurally equivalent to the expected trees (see <see cref="GetExpectedGeneratedSources"/>).
@@ -265,7 +316,7 @@ public class EmbeddedTestCase<TGenerator, TEmbeddedTest> where TGenerator : IInc
                                     // We find the updated document by the original's id
                                     Assert.IsNotNull(newDocument);
                                     // Collect the updated document's source content for assertion later on
-                                    sourcesWithAppliedFixes.Add(newDocument.GetTextAsync().GetAwaiter().GetResult().ToString());
+                                    sourcesWithAppliedFixes.Add(newDocument!.GetTextAsync().GetAwaiter().GetResult().ToString());
                                 }
                                 else
                                 {

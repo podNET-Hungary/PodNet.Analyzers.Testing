@@ -4,7 +4,6 @@
 		<TargetFramework>net8.0</TargetFramework>
 		<Description>Opinionated testing helpers for testing PodNet Roslyn analyzers and source generators.</Description>
 		<PackageTags>PodNet, analyzers, testing, Roslyn, CodeAnalysis, harness, awesome</PackageTags>
-		<DebugType>embedded</DebugType>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -15,12 +14,12 @@
 		<PackageReference Include="Microsoft.CodeAnalysis.CSharp.SourceGenerators.Testing.MSTest" Version="1.1.2" />
 		<PackageReference Include="Microsoft.CodeAnalysis.CSharp.CodeRefactoring.Testing.MSTest" Version="1.1.2" />
 		<!-- Although it would be possible to allow the consuming project to use the MSTest dependency transitively, the test runner often experiences problems if the package is not directly referenced from the test project, thus, the dependency is kept private. -->
-		<PackageReference Include="MSTest" Version="3.5.1" PrivateAssets="all" />
+		<PackageReference Include="MSTest" Version="3.5.2" PrivateAssets="all" ExcludeAssets="build" />
 		
-		<PackageReference Include="PodNet.NuGet.Core" Version="1.0.5" PrivateAssets="all" />
+		<PackageReference Include="PodNet.NuGet.Core" Version="1.0.7" PrivateAssets="all" />
 		
 		<!-- https://github.com/advisories/GHSA-447r-wph3-92pm -->
-		<PackageReference Include="System.Formats.Asn1" Version="8.0.1" />
+		<PackageReference Include="System.Formats.Asn1" Version="8.0.1" PrivateAssets="all" />
 
 		<Content Include="build/*" PackagePath="build" />
 	</ItemGroup>
