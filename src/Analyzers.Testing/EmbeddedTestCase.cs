@@ -242,7 +242,7 @@ public class EmbeddedTestCase<TGenerator, TEmbeddedTest> where TGenerator : IInc
     /// <param name="message">The message shown when the assert fails. Prepended to the diagnostics printed.</param>
     protected static void AssertNoDiagnostics(IEnumerable<Diagnostic> diagnostics, string message)
     {
-        Assert.AreEqual(0, diagnostics.TryGetNonEnumeratedCount(out var count) ? count : diagnostics.Count(), $"{message}\r\n{string.Join("\r\n", diagnostics.Select((d, i) => $"[{i}] {d.Severity} {d.Id} {d.GetMessage()}"))}");
+        Assert.AreEqual(0, diagnostics.TryGetNonEnumeratedCount(out var count) ? count : diagnostics.Count(), $"{message}\r\n{string.Join("\r\n", diagnostics.Select((d, i) => $"[{i}, {d.Location}] {d.Severity} {d.Id} {d.GetMessage()}"))}");
     }
 
     /// <summary>
