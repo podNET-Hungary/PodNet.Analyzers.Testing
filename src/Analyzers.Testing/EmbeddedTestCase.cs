@@ -109,8 +109,9 @@ public class EmbeddedTestCase<TGenerator, TEmbeddedTest> where TGenerator : IInc
     /// Creates the <see cref="CSharpCompilation"/> for the given <paramref name="syntaxTrees"/>. Uses <see cref="PodCSharpCompilation"/> by default.
     /// </summary>
     /// <param name="syntaxTrees">The sources (filename-content pairs) to include in the compilation. Note that the file names don't include the namespace/path of the original files by default.</param>
+    /// <param name="additionalFiles">The additional text files to be supplied to the generator. Not used by default.</param>
     /// <returns>The compilation.</returns>
-    public virtual CSharpCompilation CreateCompilation(ImmutableArray<SyntaxTree> syntaxTrees) => PodCSharpCompilation.Create(syntaxTrees);
+    public virtual CSharpCompilation CreateCompilation(ImmutableArray<SyntaxTree> syntaxTrees, ImmutableArray<AdditionalText> additionalFiles) => PodCSharpCompilation.Create(syntaxTrees);
 
     /// <summary>
     /// Creates the <see cref="CSharpCompilation"/> to execute <see cref="Generators"/> on, executes the generators and returns the results.
@@ -121,9 +122,9 @@ public class EmbeddedTestCase<TGenerator, TEmbeddedTest> where TGenerator : IInc
     /// <returns>The result of the generator run.</returns>
     public virtual GeneratorDriverRunResult RunGenerator(IEnumerable<File> sources, IEnumerable<File> additionalTexts, out CSharpCompilation outputCompilation)
     {
-        var additionalFiles = additionalTexts.Select(a => new Fakes.AdditionalText(a.Name, a.Content)).ToImmutableArray<AdditionalText>();
         var syntaxTrees = sources.Select(s => CSharpSyntaxTree.ParseText(s.Content, path: s.Name)).ToImmutableArray();
-        var compilation = CreateCompilation(syntaxTrees);
+        var additionalFiles = additionalTexts.Select(a => new Fakes.AdditionalText(a.Name, a.Content)).ToImmutableArray<AdditionalText>();
+        var compilation = CreateCompilation(syntaxTrees, additionalFiles);
         return compilation.RunGenerators(Generators, out _, out outputCompilation, d => ConfigureGeneratorDriver(d, syntaxTrees, additionalFiles));
     }
 
